@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Home Assistant secrets
+config.py
+config.SECRET_BACKUP.py
+
+# Local backups
+*.WORKING_BACKUP.py
+
+# Environment / credentials
+.env
+.env.*
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
