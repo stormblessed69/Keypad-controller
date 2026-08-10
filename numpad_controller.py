@@ -1,4 +1,3 @@
-```python
 import time
 import requests
 
@@ -293,24 +292,25 @@ def change_brightness(amount):
 
     if selected_jbl:
 
-        if not JBL:
-            print("⚠️ JBL no configurado.")
-            return
+        if amount > 0:
+            call_service(
+                "button",
+                "press",
+                {
+                    "entity_id": "button.estudio_increase_volume",
+                },
+            )
+            print("🔊 Volumen +")
 
-        call_service(
-            "number",
-            "set_value",
-            {
-                "entity_id": JBL,
-                "value": f"{{{{ state_attr('{JBL}', 'value') | int(0) + {amount} }}}}",
-            },
-        )
-
-        print(
-            f"🔊 Volumen "
-            f"{'+' if amount > 0 else ''}"
-            f"{amount} → {JBL}"
-        )
+        else:
+            call_service(
+                "button",
+                "press",
+                {
+                    "entity_id": "button.estudio_lower_volume",
+                },
+            )
+            print("🔊 Volumen -")
 
         return
 
@@ -658,10 +658,6 @@ def jbl_play_pause():
     Native JBL play/pause via button.
     """
 
-    if not JBL:
-        print("⚠️ JBL no configurado.")
-        return
-
     call_service(
         "button",
         "press",
@@ -673,24 +669,21 @@ def jbl_play_pause():
     print("⏯️ Play/Pause (JBL nativo)")
 
 
-def spotcast_action(action):
+def spotcast_transfer():
     """
-    Spotcast action: 'next_track' or 'previous_track'
+    Transfer Spotify playback to media_player.estudio
+    via spotcast.transfer_playback.
     """
-
-    if not JBL:
-        print("⚠️ JBL no configurado para Spotcast.")
-        return
 
     call_service(
         "spotcast",
-        action,
+        "transfer_playback",
         {
-            "entity_id": JBL,
+            "entity_id": "media_player.estudio",
         },
     )
 
-    print(f"🎵 Spotcast {action}")
+    print("🎵 Spotcast Transfer to Estudio")
 
 
 def jbl_bluetooth():
@@ -707,6 +700,38 @@ def jbl_bluetooth():
     )
 
     print("📱 JBL Bluetooth")
+
+
+def media_previous():
+    """
+    Previous track on media_player.estudio.
+    """
+
+    call_service(
+        "media_player",
+        "media_previous_track",
+        {
+            "entity_id": "media_player.estudio",
+        },
+    )
+
+    print("⏮️ Previous Track")
+
+
+def media_next():
+    """
+    Next track on media_player.estudio.
+    """
+
+    call_service(
+        "media_player",
+        "media_next_track",
+        {
+            "entity_id": "media_player.estudio",
+        },
+    )
+
+    print("⏭️ Next Track")
 
 
 # ============================================================
@@ -773,10 +798,10 @@ print("+/- → brillo")
 print(". → color / temperatura")
 print("/ → JBL/Estudio")
 print("// → JBL Bluetooth")
-print("7 → Spotcast Previous")
+print("7 → Previous Track")
 print("8 → JBL Play/Pause")
-print("88 → Spotcast Start/Resume")
-print("9 → Spotcast Next")
+print("88 → Spotcast Transfer")
+print("9 → Next Track")
 print("Enter → Proyector Power")
 print("Enter (double) → Proyector OK")
 print("Backspace → TV Power")
@@ -907,25 +932,25 @@ for event in dev.read_loop():
         continue
 
     # --------------------------------------------------------
-    # 7 — Spotcast Previous
+    # 7 — Previous Track
     # --------------------------------------------------------
 
     if keycode == "KEY_KP7":
 
         if can_repeat(keycode):
-            spotcast_action("previous_track")
+            media_previous()
 
         continue
 
     # --------------------------------------------------------
-    # 8 — JBL Play/Pause or Spotcast
+    # 8 — JBL Play/Pause or Spotcast Transfer
     # --------------------------------------------------------
 
     if keycode == "KEY_KP8":
 
         now = time.monotonic()
 
-        # Doble pulsación: Spotcast Start/Resume
+        # Doble pulsación: Spotcast Transfer
         if (
             last_number == keycode
             and now - last_number_time <= DOUBLE_TIME
@@ -934,7 +959,7 @@ for event in dev.read_loop():
             last_number = None
             last_number_time = 0
 
-            spotcast_action("start_playback")
+            spotcast_transfer()
 
             continue
 
@@ -947,13 +972,13 @@ for event in dev.read_loop():
         continue
 
     # --------------------------------------------------------
-    # 9 — Spotcast Next
+    # 9 — Next Track
     # --------------------------------------------------------
 
     if keycode == "KEY_KP9":
 
         if can_repeat(keycode):
-            spotcast_action("next_track")
+            media_next()
 
         continue
 
@@ -1049,4 +1074,3 @@ for event in dev.read_loop():
     # --------------------------------------------------------
 
     print(f"Tecla no asignada: {keycode}")
-```
