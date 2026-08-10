@@ -48,6 +48,8 @@ dev = InputDevice(DEVICE)
 
 selected_light = None
 selected_all = False
+selected_jbl = False
+selected_tv = False
 
 last_number = None
 last_number_time = 0
@@ -142,6 +144,39 @@ def get_state(entity):
         return None
 
 
+def get_attributes(entity):
+    """
+    Obtiene los atributos de una entidad.
+    """
+
+    url = f"{HA_URL}/api/states/{entity}"
+
+    try:
+        response = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=REQUEST_TIMEOUT,
+        )
+
+    except requests.exceptions.Timeout:
+        print("⚠️ Timeout consultando Home Assistant.")
+        return None
+
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error consultando HA: {e}")
+        return None
+
+    if response.status_code != 200:
+        print(f"❌ Error HA {response.status_code}")
+        return None
+
+    try:
+        return response.json().get("attributes", {})
+
+    except Exception:
+        return None
+
+
 # ============================================================
 # SELECCIÓN DE LUCES
 # ============================================================
@@ -149,6 +184,8 @@ def get_state(entity):
 def select_light(key):
     global selected_light
     global selected_all
+    global selected_jbl
+    global selected_tv
 
     entity = LIGHTS.get(key)
 
@@ -158,6 +195,8 @@ def select_light(key):
 
     selected_light = entity
     selected_all = False
+    selected_jbl = False
+    selected_tv = False
 
     print(f"💡 Luz seleccionada: {entity}")
 
@@ -165,12 +204,46 @@ def select_light(key):
 def select_all_lights():
     global selected_light
     global selected_all
+    global selected_jbl
+    global selected_tv
 
     selected_light = None
     selected_all = True
+    selected_jbl = False
+    selected_tv = False
 
     print("💡 TODAS LAS LUCES SELECCIONADAS")
     print("+/- → brillo de todas las luces")
+
+
+def select_jbl():
+    global selected_light
+    global selected_all
+    global selected_jbl
+    global selected_tv
+
+    selected_light = None
+    selected_all = False
+    selected_jbl = True
+    selected_tv = False
+
+    print("🔊 JBL/ESTUDIO SELECCIONADO")
+    print("+/- → volumen")
+
+
+def select_tv():
+    global selected_light
+    global selected_all
+    global selected_jbl
+    global selected_tv
+
+    selected_light = None
+    selected_all = False
+    selected_jbl = False
+    selected_tv = True
+
+    print("📺 TV/MONITOR SELECCIONADO")
+    print("+/- → volumen de TV")
 
 
 # ============================================================
@@ -186,7 +259,7 @@ def get_all_lights():
 
 
 # ============================================================
-# BRILLO
+# BRILLO / VOLUMEN
 # ============================================================
 
 def change_brightness(amount):
@@ -218,6 +291,58 @@ def change_brightness(amount):
 
         return
 
+    if selected_jbl:
+
+        if not JBL:
+            print("⚠️ JBL no configurado.")
+            return
+
+        call_service(
+            "number",
+            "set_value",
+            {
+                "entity_id": JBL,
+                "value": f"{{{{ state_attr('{JBL}', 'value') | int(0) + {amount} }}}}",
+            },
+        )
+
+        print(
+            f"🔊 Volumen "
+            f"{'+' if amount > 0 else ''}"
+            f"{amount} → {JBL}"
+        )
+
+        return
+
+    if selected_tv:
+
+        if amount > 0:
+            call_service(
+                "remote",
+                "send_command",
+                {
+                    "entity_id": "remote.control_universal",
+                    "device": "televisor_monitor",
+                    "command": "volume_up",
+                },
+            )
+
+            print("📺 Volumen UP")
+
+        else:
+            call_service(
+                "remote",
+                "send_command",
+                {
+                    "entity_id": "remote.control_universal",
+                    "device": "televisor_monitor",
+                    "command": "volume_down",
+                },
+            )
+
+            print("📺 Volumen DOWN")
+
+        return
 
     if not selected_light:
 
@@ -227,7 +352,6 @@ def change_brightness(amount):
         )
 
         return
-
 
     call_service(
         "light",
@@ -255,7 +379,6 @@ def toggle_or_default(entity):
 
     if state is None:
         return
-
 
     if state == "on":
 
@@ -298,7 +421,6 @@ def toggle_all_lights():
         print("⚠️ No hay luces configuradas.")
         return
 
-
     # Consultamos los estados.
     states = []
 
@@ -309,16 +431,13 @@ def toggle_all_lights():
         if state is not None:
             states.append(state)
 
-
     if not states:
         print("⚠️ No pude consultar las luces.")
         return
 
-
     # Si TODAS están encendidas → apagar todas.
     # En cualquier otro caso → encender todas.
     all_on = all(state == "on" for state in states)
-
 
     if all_on:
 
@@ -367,7 +486,6 @@ def change_light_mode():
 
         return
 
-
     if not selected_light:
 
         print(
@@ -376,7 +494,6 @@ def change_light_mode():
         )
 
         return
-
 
     change_entity_mode(selected_light)
 
@@ -411,39 +528,13 @@ def change_entity_mode(entity):
             print(f"⚪ BLANCO → {entity}")
             return
 
-
         # Consultamos atributos para determinar el color.
-        url = f"{HA_URL}/api/states/{entity}"
+        attributes = get_attributes(entity)
 
-        try:
-
-            response = requests.get(
-                url,
-                headers=HEADERS,
-                timeout=REQUEST_TIMEOUT,
-            )
-
-            if response.status_code != 200:
-                print(f"❌ Error HA {response.status_code}")
-                return
-
-            attributes = response.json().get(
-                "attributes",
-                {},
-            )
-
-            rgb = attributes.get("rgb_color")
-
-        except requests.exceptions.Timeout:
-
-            print("⚠️ Timeout de Home Assistant.")
+        if attributes is None:
             return
 
-        except requests.exceptions.RequestException as e:
-
-            print(f"❌ Error HA: {e}")
-            return
-
+        rgb = attributes.get("rgb_color")
 
         # Si está aproximadamente naranja → blanco
         if rgb and rgb[0] > 180 and rgb[1] < 180:
@@ -465,7 +556,7 @@ def change_entity_mode(entity):
                 "light",
                 "turn_on",
                 {
-                    "entity": entity,
+                    "entity_id": entity,
                     "rgb_color": [255, 100, 0],
                 },
             )
@@ -473,7 +564,6 @@ def change_entity_mode(entity):
             print(f"🎨 NARANJA → {entity}")
 
         return
-
 
     # --------------------------------------------------------
     # AURUM / CUPRUM
@@ -485,47 +575,22 @@ def change_entity_mode(entity):
         "light.kitchen_cuprum",
     ):
 
-        url = f"{HA_URL}/api/states/{entity}"
+        attributes = get_attributes(entity)
 
-        try:
-
-            response = requests.get(
-                url,
-                headers=HEADERS,
-                timeout=REQUEST_TIMEOUT,
-            )
-
-            if response.status_code != 200:
-                print(f"❌ Error HA {response.status_code}")
-                return
-
-            attributes = response.json().get(
-                "attributes",
-                {},
-            )
-
-            color_temp = attributes.get(
-                "color_temp"
-            )
-
-            min_temp = attributes.get(
-                "min_color_temp_kelvin"
-            )
-
-            max_temp = attributes.get(
-                "max_color_temp_kelvin"
-            )
-
-        except requests.exceptions.Timeout:
-
-            print("⚠️ Timeout de Home Assistant.")
+        if attributes is None:
             return
 
-        except requests.exceptions.RequestException as e:
+        color_temp_kelvin = attributes.get(
+            "color_temp_kelvin"
+        )
 
-            print(f"❌ Error HA: {e}")
-            return
+        min_temp = attributes.get(
+            "min_color_temp_kelvin"
+        )
 
+        max_temp = attributes.get(
+            "max_color_temp_kelvin"
+        )
 
         # Valores aproximados.
         # Se adaptan automáticamente si HA informa
@@ -541,35 +606,32 @@ def change_entity_mode(entity):
             cold_kelvin = 6500
             warm_kelvin = 2700
 
-
         # Si no sabemos el estado actual,
         # empezamos en frío.
-        if color_temp is None:
+        if color_temp_kelvin is None:
 
             target = cold_kelvin
             mode = "❄️ BLANCO FRÍO"
 
         else:
 
-            # HA suele manejar color_temp en mireds.
-            # Menor mired = más frío.
+            # Calculamos el punto medio en Kelvin.
             midpoint = (
                 min_temp + max_temp
             ) / 2 if (
                 min_temp is not None
                 and max_temp is not None
-            ) else color_temp
+            ) else (cold_kelvin + warm_kelvin) / 2
 
-            if color_temp > midpoint:
-
-                target = cold_kelvin
-                mode = "❄️ BLANCO FRÍO"
-
-            else:
+            if color_temp_kelvin > midpoint:
 
                 target = warm_kelvin
                 mode = "🔥 BLANCO CÁLIDO"
 
+            else:
+
+                target = cold_kelvin
+                mode = "❄️ BLANCO FRÍO"
 
         call_service(
             "light",
@@ -584,8 +646,113 @@ def change_entity_mode(entity):
 
         return
 
-
     print(f"⚠️ Modo de color no configurado para {entity}")
+
+
+# ============================================================
+# JBL / MULTIMEDIA
+# ============================================================
+
+def jbl_play_pause():
+    """
+    Native JBL play/pause via button.
+    """
+
+    if not JBL:
+        print("⚠️ JBL no configurado.")
+        return
+
+    call_service(
+        "button",
+        "press",
+        {
+            "entity_id": "button.estudio_play_pause",
+        },
+    )
+
+    print("⏯️ Play/Pause (JBL nativo)")
+
+
+def spotcast_action(action):
+    """
+    Spotcast action: 'next_track' or 'previous_track'
+    """
+
+    if not JBL:
+        print("⚠️ JBL no configurado para Spotcast.")
+        return
+
+    call_service(
+        "spotcast",
+        action,
+        {
+            "entity_id": JBL,
+        },
+    )
+
+    print(f"🎵 Spotcast {action}")
+
+
+def jbl_bluetooth():
+    """
+    Toggle JBL Bluetooth via button.
+    """
+
+    call_service(
+        "button",
+        "press",
+        {
+            "entity_id": "button.estudio_bluetooth",
+        },
+    )
+
+    print("📱 JBL Bluetooth")
+
+
+# ============================================================
+# INFRARED / BROADLINK
+# ============================================================
+
+def broadlink_send(device, command):
+    """
+    Send IR command via Broadlink remote.
+    """
+
+    call_service(
+        "remote",
+        "send_command",
+        {
+            "entity_id": "remote.control_universal",
+            "device": device,
+            "command": command,
+        },
+    )
+
+    print(f"📡 IR {device}: {command}")
+
+
+def projector_power():
+    """
+    Projector power toggle (single press Enter).
+    """
+
+    broadlink_send("proyector", "power")
+
+
+def projector_ok():
+    """
+    Projector OK button (double press Enter).
+    """
+
+    broadlink_send("proyector", "ok")
+
+
+def tv_power():
+    """
+    TV power toggle (single press Backspace).
+    """
+
+    broadlink_send("televisor_monitor", "power")
 
 
 # ============================================================
@@ -604,6 +771,16 @@ print("00 → toggle todas")
 print("0 → seleccionar todas")
 print("+/- → brillo")
 print(". → color / temperatura")
+print("/ → JBL/Estudio")
+print("// → JBL Bluetooth")
+print("7 → Spotcast Previous")
+print("8 → JBL Play/Pause")
+print("88 → Spotcast Start/Resume")
+print("9 → Spotcast Next")
+print("Enter → Proyector Power")
+print("Enter (double) → Proyector OK")
+print("Backspace → TV Power")
+print("Backspace (double) → TV Volume Mode")
 print()
 
 
@@ -616,9 +793,7 @@ for event in dev.read_loop():
     if event.type != ecodes.EV_KEY:
         continue
 
-
     key = categorize(event)
-
 
     # --------------------------------------------------------
     # SOLO KEY DOWN
@@ -627,9 +802,7 @@ for event in dev.read_loop():
     if key.keystate != key.key_down:
         continue
 
-
     keycode = key.keycode
-
 
     # --------------------------------------------------------
     # IGNORAR NUMLOCK
@@ -638,7 +811,6 @@ for event in dev.read_loop():
     if keycode == "KEY_NUMLOCK":
         continue
 
-
     # --------------------------------------------------------
     # 0
     # --------------------------------------------------------
@@ -646,7 +818,6 @@ for event in dev.read_loop():
     if keycode == "KEY_KP0":
 
         now = time.monotonic()
-
 
         # Segundo 0 dentro de la ventana
         if (
@@ -661,7 +832,6 @@ for event in dev.read_loop():
 
             continue
 
-
         # Primer 0
         select_all_lights()
 
@@ -670,7 +840,6 @@ for event in dev.read_loop():
 
         continue
 
-
     # --------------------------------------------------------
     # LUCES 1-6
     # --------------------------------------------------------
@@ -678,7 +847,6 @@ for event in dev.read_loop():
     if keycode in LIGHTS:
 
         now = time.monotonic()
-
 
         # Doble pulsación
         if (
@@ -696,7 +864,6 @@ for event in dev.read_loop():
 
             continue
 
-
         # Primera pulsación
         select_light(keycode)
 
@@ -704,7 +871,6 @@ for event in dev.read_loop():
         last_number_time = now
 
         continue
-
 
     # --------------------------------------------------------
     # BRILLO +
@@ -717,7 +883,6 @@ for event in dev.read_loop():
 
         continue
 
-
     # --------------------------------------------------------
     # BRILLO -
     # --------------------------------------------------------
@@ -728,7 +893,6 @@ for event in dev.read_loop():
             change_brightness(-BRIGHTNESS_STEP)
 
         continue
-
 
     # --------------------------------------------------------
     # .
@@ -742,6 +906,143 @@ for event in dev.read_loop():
 
         continue
 
+    # --------------------------------------------------------
+    # 7 — Spotcast Previous
+    # --------------------------------------------------------
+
+    if keycode == "KEY_KP7":
+
+        if can_repeat(keycode):
+            spotcast_action("previous_track")
+
+        continue
+
+    # --------------------------------------------------------
+    # 8 — JBL Play/Pause or Spotcast
+    # --------------------------------------------------------
+
+    if keycode == "KEY_KP8":
+
+        now = time.monotonic()
+
+        # Doble pulsación: Spotcast Start/Resume
+        if (
+            last_number == keycode
+            and now - last_number_time <= DOUBLE_TIME
+        ):
+
+            last_number = None
+            last_number_time = 0
+
+            spotcast_action("start_playback")
+
+            continue
+
+        # Primera pulsación: JBL native play/pause
+        jbl_play_pause()
+
+        last_number = keycode
+        last_number_time = now
+
+        continue
+
+    # --------------------------------------------------------
+    # 9 — Spotcast Next
+    # --------------------------------------------------------
+
+    if keycode == "KEY_KP9":
+
+        if can_repeat(keycode):
+            spotcast_action("next_track")
+
+        continue
+
+    # --------------------------------------------------------
+    # / — JBL Selection or Bluetooth
+    # --------------------------------------------------------
+
+    if keycode == "KEY_KPSLASH":
+
+        now = time.monotonic()
+
+        # Doble pulsación: JBL Bluetooth
+        if (
+            last_number == keycode
+            and now - last_number_time <= DOUBLE_TIME
+        ):
+
+            last_number = None
+            last_number_time = 0
+
+            jbl_bluetooth()
+
+            continue
+
+        # Primera pulsación: Select JBL
+        select_jbl()
+
+        last_number = keycode
+        last_number_time = now
+
+        continue
+
+    # --------------------------------------------------------
+    # Backspace — TV Power or TV Volume Context
+    # --------------------------------------------------------
+
+    if keycode == "KEY_BACKSPACE":
+
+        now = time.monotonic()
+
+        # Doble pulsación: TV Volume Context
+        if (
+            last_number == keycode
+            and now - last_number_time <= DOUBLE_TIME
+        ):
+
+            last_number = None
+            last_number_time = 0
+
+            select_tv()
+
+            continue
+
+        # Primera pulsación: TV Power
+        tv_power()
+
+        last_number = keycode
+        last_number_time = now
+
+        continue
+
+    # --------------------------------------------------------
+    # Enter — Projector Power or OK
+    # --------------------------------------------------------
+
+    if keycode == "KEY_KPENTER":
+
+        now = time.monotonic()
+
+        # Doble pulsación: Projector OK
+        if (
+            last_number == keycode
+            and now - last_number_time <= DOUBLE_TIME
+        ):
+
+            last_number = None
+            last_number_time = 0
+
+            projector_ok()
+
+            continue
+
+        # Primera pulsación: Projector Power
+        projector_power()
+
+        last_number = keycode
+        last_number_time = now
+
+        continue
 
     # --------------------------------------------------------
     # DEBUG
