@@ -1,447 +1,419 @@
-````markdown
-# KEYMAP — Numpad Home Assistant
+# KEYMAP.md
 
-## Dispositivo físico
+# HS6209 Numpad — Authoritative Keymap
 
-```text
-HS6209 2.4G Wireless Receiver
-````
+This file defines the required behavior of every physical keypad key.
 
-Linux:
-
-```text
-/dev/input/by-id/usb-HS6209_2.4G_Wireless_Receiver-event-kbd
-```
+The physical keypad layout must not be changed.
 
 ---
 
-# Mapa físico
+## 1 — Living Room Aurum
 
-```text
-┌────────┬────────┬────────┬────────┐
-│ Num    │   /    │   *    │   -    │
-│ Lock   │        │        │        │
-├────────┼────────┼────────┼────────┤
-│ 7      │ 8      │ 9      │   +    │
-│ Home   │ ↑      │ PgUp   │        │
-├────────┼────────┼────────┼────────┤
-│ 4      │ 5      │ 6      │ Back   │
-│ ←      │        │ →      │ Space  │
-├────────┼────────┼────────┼────────┤
-│ 1      │ 2      │ 3      │ Enter  │
-│ End    │ ↓      │ PgDn   │   =    │
-├─────────────────┼────────┼────────┤
-│       0         │   .    │        │
-│       Ins       │  Del   │        │
-└─────────────────┴────────┴────────┘
-```
+Entity:
 
----
+`light.living_room_aurum`
 
-# Teclas 1–6 — Luces
+### Single press
 
-## Selección
+Select Aurum as the active light/context.
 
-| Tecla | Entidad                    | Función                |
-| ----- | -------------------------- | ---------------------- |
-| `1`   | `light.living_room_aurum`  | Seleccionar Aurum      |
-| `2`   | `light.alacena`            | Seleccionar Alacena    |
-| `3`   | Pendiente                  | Seleccionar futura luz |
-| `4`   | `light.kitchen_cuprum`     | Seleccionar Cuprum     |
-| `5`   | `light.living_room_espejo` | Seleccionar Espejo     |
-| `6`   | Pendiente                  | Seleccionar futura luz |
+### Double press
+
+Toggle Aurum.
+
+When turning it ON, use `DEFAULT_BRIGHTNESS`.
+
+### `+` / `-`
+
+When Aurum is selected:
+
+- `+` = increase brightness
+- `-` = decrease brightness
+
+### `.`
+
+Toggle Aurum between:
+
+- cold white
+- warm white
+
+Use normal color-temperature handling.
 
 ---
 
-## Pulsación simple
+## 2 — Alacena
 
-Una pulsación de `1`–`6` selecciona la luz.
+Entity:
 
-Ejemplo:
+`light.alacena`
 
-```text
-5
-↓
-selected_light = light.living_room_espejo
-```
+### Single press
 
-Una vez seleccionada una luz:
+Select Alacena as the active light/context.
 
-```text
-+ → brillo +10%
-- → brillo -10%
-```
+### Double press
 
----
+Toggle Alacena.
 
-## Doble pulsación
+When turning it ON, use `DEFAULT_BRIGHTNESS`.
 
-Una doble pulsación de `1`–`6`:
+### `+` / `-`
 
-```text
-Luz ON/OFF
-```
+When Alacena is selected:
 
-Cuando la luz está apagada, se utiliza el brillo predeterminado configurado actualmente:
+- `+` = increase brightness
+- `-` = decrease brightness
 
-```text
-DEFAULT_BRIGHTNESS = 70
-```
+### `.`
 
----
+Toggle between:
 
-# `+` — Brillo / volumen contextual
+- WHITE
+- ORANGE
 
-La tecla `+` no tiene una única función fija.
+IMPORTANT:
 
-Su comportamiento depende del dispositivo/modo seleccionado.
+Alacena must NOT be treated as a normal cold-white/warm-white
+color-temperature light.
 
-### Luz seleccionada
-
-```text
-+ → brillo +10%
-```
-
-### JBL seleccionado
-
-```text
-+ → volumen +
-```
-
-### TV/monitor en modo volumen
-
-```text
-+ → volumen +
-```
-
-### Todas las luces
-
-Cuando se activa el modo global:
-
-```text
-+ → brillo de todas las luces +
-```
+Use RGB color handling.
 
 ---
 
-# `-` — Brillo / volumen contextual
+## 3
 
-### Luz seleccionada
+Reserved / future.
 
-```text
-- → brillo -10%
-```
-
-### JBL seleccionado
-
-```text
-- → volumen -
-```
-
-### TV/monitor en modo volumen
-
-```text
-- → volumen -
-```
-
-### Todas las luces
-
-```text
-- → brillo de todas las luces -
-```
+Do not invent functionality.
 
 ---
 
-# `0` — Todas las luces
+## 4 — Kitchen Cuprum
 
-### Pulsación simple
+Entity:
 
-```text
-0
-↓
-Toggle general de todas las luces
-```
+`light.kitchen_cuprum`
 
-### Doble pulsación
+### Single press
 
-La doble pulsación de `0` debe activar el modo:
+Select Cuprum as the active light/context.
 
-```text
-CONTROL GLOBAL DE BRILLO
-```
+### Double press
 
-En ese estado:
+Toggle Cuprum.
 
-```text
-+ → todas las luces +10%
-- → todas las luces -10%
-```
+When turning it ON, use `DEFAULT_BRIGHTNESS`.
 
-Este comportamiento es una de las áreas que todavía requiere refinamiento.
+### `+` / `-`
 
----
+When Cuprum is selected:
 
-# `.` — Temperatura / color
+- `+` = increase brightness
+- `-` = decrease brightness
 
-La tecla `.` modifica el tipo de iluminación de la luz seleccionada.
+### `.`
 
-## Luces normales
+Toggle Cuprum between:
 
-```text
-Blanco frío ↔ Blanco cálido
-```
+- cold white
+- warm white
 
-## Espejo
-
-Entidad:
-
-```text
-light.living_room_espejo
-```
-
-Comportamiento:
-
-```text
-Blanco ↔ Naranja
-```
-
-## Alacena
-
-Entidad:
-
-```text
-light.alacena
-```
-
-Comportamiento:
-
-```text
-Blanco ↔ Naranja
-```
-
-La diferencia existe porque Espejo y Alacena manejan el color de manera distinta a las otras luces.
+Use normal color-temperature handling.
 
 ---
 
-# `/` — JBL
+## 5 — Living Room Espejo
 
-Dispositivo:
+Entity:
 
-```text
-JBL 300
-```
+`light.living_room_espejo`
 
-Entidad:
+### Single press
 
-```text
-media_player.estudio
-```
+Select Espejo as the active light/context.
 
-### Pulsación simple
+### Double press
 
-Selecciona el JBL como dispositivo contextual.
+Toggle Espejo.
 
-Después:
+When turning it ON, use `DEFAULT_BRIGHTNESS`.
 
-```text
-+ → volumen +
-- → volumen -
-```
+### `+` / `-`
 
-### Doble pulsación
+When Espejo is selected:
 
-```text
-/ / 
-↓
-button.estudio_bluetooth
-```
+- `+` = increase brightness
+- `-` = decrease brightness
 
-Activa Bluetooth.
+### `.`
 
----
+Toggle between:
 
-# `7` — Spotify anterior
+- WHITE
+- ORANGE
 
-Control mediante Spotcast.
+IMPORTANT:
 
-```text
-7 → pista anterior
-```
+Espejo must NOT be treated as a normal cold-white/warm-white
+color-temperature light.
+
+Use RGB color handling.
 
 ---
 
-# `8` — Play/Pause
+## 6
 
-Esta tecla tiene comportamiento diferente según el número de pulsaciones.
+Reserved / future.
 
-### Pulsación simple
-
-Controla el reproductor nativo:
-
-```text
-media_player.estudio
-```
-
-Acción:
-
-```text
-Play/Pause
-```
-
-### Doble pulsación
-
-Controla Spotify mediante Spotcast:
-
-```text
-Play/Pause
-```
-
-Esto permite diferenciar:
-
-```text
-8 simple
-↓
-JBL nativo
-```
-
-de:
-
-```text
-8 doble
-↓
-Spotify / Spotcast
-```
+Do not invent functionality.
 
 ---
 
-# `9` — Spotify siguiente
+# MULTIMEDIA
 
-Control mediante Spotcast.
+## 7 — Spotcast Previous
 
-```text
-9 → siguiente pista
-```
+Spotcast action:
 
----
+`previous_track`
 
-# `Backspace` — TV / Monitor
+Use the authoritative Spotcast entity from `ENTITIES.md`.
 
-Dispositivo objetivo:
-
-```text
-TV / Monitor
-```
-
-### Pulsación simple
-
-Función principal del dispositivo.
-
-### Doble pulsación
-
-Activa modo:
-
-```text
-CONTROL DE VOLUMEN
-```
-
-Entonces:
-
-```text
-+ → volumen +
-- → volumen -
-```
+Do not use a guessed media player.
 
 ---
 
-# `Enter` — Proyector
+## 8 — JBL Native Play/Pause
 
-### Pulsación simple
+Entity:
 
-```text
-Enter → encender proyector
-```
+`media_player.estudio`
 
-### Doble pulsación
+### Single press
 
-```text
-Enter Enter → OK
-```
+Use native media play/pause on:
 
----
+`media_player.estudio`
 
-# `*` — Reservada
-
-Actualmente:
-
-```text
-SIN FUNCIÓN DEFINITIVA
-```
-
-Reservada para:
-
-* escenas
-* automatizaciones
-* funciones futuras
+This is NOT the Spotcast action.
 
 ---
 
-# `NumLock`
+## 88 — Spotify / Spotcast
 
-Ignorado por el controlador.
+Double press of `8`.
 
-```text
-KEY_NUMLOCK → ignore
-```
+Start/resume Spotify playback on the `estudio` Spotcast device.
 
----
+This is separate from native JBL play/pause.
 
-# Sistema de pulsación doble
-
-La detección utiliza:
-
-```text
-DOUBLE_PRESS_TIME
-```
-
-Actualmente:
-
-```text
-DOUBLE_PRESS_TIME = 0.4
-```
-
-Por lo tanto, dos pulsaciones de la misma tecla dentro de aproximadamente:
-
-```text
-400 ms
-```
-
-se interpretan como doble pulsación.
+Use the exact Spotcast entity/action documented in `ENTITIES.md`.
 
 ---
 
-# Filosofía del layout
+## 9 — Spotcast Next
 
-El objetivo es aprovechar el layout físico del numpad y utilizar:
+Spotcast action:
 
-```text
-Pulsación simple
-+
-Doble pulsación
-+
-Estado seleccionado
-+
-Modo contextual
-```
+`next_track`
 
-para obtener muchas funciones sin agregar teclas físicas.
+Use the authoritative Spotcast entity from `ENTITIES.md`.
 
-El layout debe mantenerse estable una vez consolidado, porque el usuario está desarrollando memoria muscular para utilizar el numpad como controlador físico.
-
-````
-
-Guardá:
-
-**Ctrl + O → Enter → Ctrl + X**
+Do not use a guessed media player.
 
 ---
 
+# JBL CONTEXT
+
+## `/` — JBL Selection
+
+Single press:
+
+Select JBL/media context.
+
+When JBL is selected:
+
+- `+` = increase JBL volume
+- `-` = decrease JBL volume
+
+JBL entity:
+
+`media_player.estudio`
+
+---
+
+## `//` — JBL Bluetooth
+
+Double press of `/`.
+
+Press:
+
+`button.estudio_bluetooth`
+
+---
+
+# GLOBAL LIGHT CONTEXT
+
+## 0
+
+Preserve the existing global-light behavior unless it directly conflicts
+with the requirements in this file.
+
+Do not invent a new behavior.
+
+If the current implementation and documentation disagree about `0`,
+report the discrepancy before changing it.
+
+---
+
+## GLOBAL BRIGHTNESS
+
+If the existing project exposes a global-light brightness context,
+`+` and `-` must control all relevant lights while that context is active.
+
+Do not remove an existing working global-light feature.
+
+---
+
+# COLOR KEY
+
+## `.`
+
+Controls the currently selected light.
+
+### Aurum / Cuprum
+
+Use normal color-temperature handling:
+
+`cold white <-> warm white`
+
+### Alacena / Espejo
+
+Use RGB handling:
+
+`white <-> orange`
+
+Do NOT send `color_temp` to Alacena or Espejo for this function.
+
+---
+
+# INFRARED
+
+## Enter — Projector
+
+Broadlink remote:
+
+`remote.control_universal`
+
+Broadlink device:
+
+`proyector`
+
+### Single press
+
+Send:
+
+`power`
+
+### Double press
+
+Send:
+
+`ok`
+
+---
+
+## Backspace — TV / Monitor
+
+Broadlink remote:
+
+`remote.control_universal`
+
+Broadlink device:
+
+`televisor_monitor`
+
+### Single press
+
+Send:
+
+`power`
+
+### Double press
+
+Enter TV volume context.
+
+While TV volume context is active:
+
+- `+` = `volume_up`
+- `-` = `volume_down`
+
+---
+
+# RESERVED KEYS
+
+## 3
+
+Reserved.
+
+## 6
+
+Reserved.
+
+## *
+
+Reserved.
+
+Do not assign functionality without explicit instruction.
+
+## NumLock
+
+Ignored.
+
+---
+
+# INPUT RULES
+
+Double press uses the existing:
+
+`DOUBLE_PRESS_TIME`
+
+Do not increase the double-press delay unnecessarily.
+
+The event listener must remain responsive while waiting to determine whether
+a second press occurred.
+
+Held/repeated keypad events must not flood Home Assistant.
+
+---
+
+# CONTEXT PRIORITY
+
+`+` and `-` are contextual.
+
+Priority must be deterministic.
+
+Possible contexts include:
+
+1. TV volume
+2. JBL volume
+3. selected-light brightness
+4. global-light brightness
+
+Do not invent additional contexts.
+
+If the existing project already has an explicit context-state mechanism,
+reuse it.
+
+---
+
+# IMPORTANT
+
+This file describes DESIRED FUNCTIONAL BEHAVIOR.
+
+The fact that a function is listed here does not mean the current code already
+implements it.
+
+If code differs from this file, report the difference and implement the
+minimum necessary fix.
