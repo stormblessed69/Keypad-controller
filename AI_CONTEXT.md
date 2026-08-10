@@ -1,428 +1,104 @@
-# AI_CONTEXT — Numpad Home Assistant Controller
+# AI_CONTEXT.md
+
+## Purpose
 
-## INSTRUCCIÓN PRINCIPAL
+This repository controls an HS6209 USB numpad through `evdev` and the
+Home Assistant REST API.
 
-Este repositorio contiene un proyecto funcional de un numpad inalámbrico convertido en controlador físico para Home Assistant.
+The controller is an existing working project. Extend it incrementally.
 
-Antes de modificar cualquier código:
+## AI DEVELOPMENT RULES
 
-1. Leer `README.md`.
-2. Leer `PROJECT_CONTEXT.md`.
-3. Leer `KEYMAP.md`.
-4. Revisar `numpad_controller.py`.
-5. Revisar `config.py` si está disponible localmente.
-6. No eliminar funcionalidades existentes sin indicarlo explícitamente.
-7. Mantener compatibilidad con el hardware y las entidades documentadas.
-8. Probar cada modificación antes de reemplazar una versión funcional.
+1. Preserve the existing `evdev + REST` architecture.
+2. Modify the minimum necessary files.
+3. Do not rewrite the controller unless strictly necessary.
+4. Do not perform unrelated refactors.
+5. Preserve working functionality.
+6. Do not change the physical keypad layout.
+7. Do not invent Home Assistant entities.
+8. Do not invent IR commands.
+9. Do not invent Spotcast entities.
+10. Do not modify the structure or secrets in `config.py`.
+11. Never implement the air conditioner unless explicitly requested.
+12. Preserve existing timeout, rate-limit and error-handling behavior.
+13. Single/double press handling must not block the `evdev` event loop.
+14. Home Assistant failures must not terminate the keypad process.
+15. Prefer existing helper functions over new duplicate implementations.
+16. Before changing code, inspect the relevant existing implementation.
+17. After changes, validate Python syntax and inspect `git diff`.
+18. If requirements conflict with existing code or documentation, report
+    the conflict instead of guessing.
+19. Do not change unrelated behavior merely to make the code "cleaner".
+20. Keep hardware-specific facts in documentation rather than hard-coding
+    assumptions that are not documented.
 
-El objetivo es evolucionar el proyecto incrementalmente, no reescribirlo desde cero.
+## SOURCE OF TRUTH
 
----
+Use these files in this order:
 
-# HARDWARE
+1. `AI_CONTEXT.md` — development rules
+2. `KEYMAP.md` — authoritative keypad behavior
+3. `ENTITIES.md` — authoritative Home Assistant entities
+4. `HARDWARE_INTEGRATION.md` — Broadlink/IR hardware facts
+5. `PROJECT_CONTEXT.md` — architecture/background
+6. Python source code — current implementation
 
-Dispositivo:
+If source code conflicts with the documented desired behavior, report it
+as `FIX` or `CONFLICT`; do not silently redefine the specification.
 
-```text
-HS6209 2.4G Wireless Receiver
+## IMPLEMENTATION PHILOSOPHY
 
-Dispositivo Linux:
+The goal is reliable behavior, not a rewrite.
 
-/dev/input/by-id/usb-HS6209_2.4G_Wireless_Receiver-event-kbd
+Prefer:
 
-El controlador utiliza Python + evdev para leer directamente los eventos del teclado.
+- small changes
+- reusable helpers
+- explicit state
+- deterministic key handling
+- short Home Assistant requests
+- clear separation between keypad input and Home Assistant actions
 
-El programa se ejecuta en un servidor Linux y controla Home Assistant mediante REST API.
+Avoid:
 
-HOME ASSISTANT
+- unnecessary abstractions
+- large rewrites
+- blocking sleeps
+- duplicated API code
+- guessed entity IDs
+- guessed service calls
+- guessed IR behavior
 
-URL:
+## TESTING REQUIREMENT
 
-http://localhost:8123
+Every implemented key must be testable against `KEYMAP.md`.
 
-Comunicación:
+A successful Python syntax check is NOT sufficient.
 
-Home Assistant REST API
+The implementation must be checked for:
 
-Autenticación:
+- single press
+- double press
+- contextual `+` / `-`
+- repeated presses
+- Home Assistant timeout
+- Home Assistant unavailable
+- context switching
+- no selected device
+- accidental key autorepeat
 
-Bearer Token
+## CURRENT PROJECT SCOPE
 
-El token está únicamente en:
+Currently supported domains:
 
-config.py
+- lights
+- JBL/media
+- Spotcast
+- Broadlink IR projector
+- Broadlink IR TV/monitor
 
-config.py NO debe subirse a GitHub.
+Explicitly postponed:
 
-ARCHIVO PRINCIPAL
+- Hyundai air conditioner IR integration
 
-Controlador actual:
-
-numpad_controller.py
-
-Versiones anteriores:
-
-numpad_controller_v2.py
-numpad_controller.WORKING_BACKUP.py
-
-No reemplazar el controlador actual por una versión anterior salvo que se solicite explícitamente.
-
-MAPA ACTUAL
-LUces
-1 → Aurum
-2 → Alacena
-3 → futura luz
-4 → Cuprum
-5 → Espejo
-6 → futura luz
-
-Entidades:
-
-1 → light.living_room_aurum
-2 → light.alacena
-4 → light.kitchen_cuprum
-5 → light.living_room_espejo
-
-Una pulsación:
-
-1–6 → seleccionar luz
-
-Una vez seleccionada:
-
-+ → brillo +10%
-- → brillo -10%
-
-Doble pulsación:
-
-1–6 → encender/apagar luz
-
-Si estaba apagada:
-
-DEFAULT_BRIGHTNESS = 70
-0 — TODAS LAS LUCES
-
-Una pulsación:
-
-0 → toggle de todas las luces
-
-Doble pulsación:
-
-0 → activar modo de brillo global
-
-En modo global:
-
-+ → brillo de todas las luces +
-- → brillo de todas las luces -
-
-IMPORTANTE:
-
-El toggle general ya funciona.
-
-El modo de brillo global requiere especial cuidado porque fue una de las partes que presentó problemas durante las pruebas.
-
-. — COLOR / TEMPERATURA
-
-La tecla . cambia el tipo de iluminación de la luz seleccionada.
-
-Luces normales:
-
-Blanco frío ↔ Blanco cálido
-
-Espejo:
-
-Blanco ↔ Naranja
-
-Alacena:
-
-Blanco ↔ Naranja
-
-Espejo y Alacena manejan el color de forma diferente al resto.
-
-/ — JBL
-
-JBL físico:
-
-JBL 300
-
-Entidad principal:
-
-media_player.estudio
-
-Una pulsación:
-
-/ → seleccionar JBL
-
-Después:
-
-+ → volumen +
-- → volumen -
-
-Doble pulsación:
-
-/ / → button.estudio_bluetooth
-7 — SPOTIFY ANTERIOR
-7 → pista anterior
-
-Debe utilizar Spotcast.
-
-8 — PLAY/PAUSE
-
-Una pulsación:
-
-8 → Play/Pause del dispositivo nativo
-
-Dispositivo nativo:
-
-media_player.estudio
-
-Doble pulsación:
-
-8 8 → Play/Pause de Spotify mediante Spotcast
-
-IMPORTANTE:
-
-Estas dos funciones deben permanecer separadas.
-
-9 — SPOTIFY SIGUIENTE
-9 → siguiente pista
-
-Debe utilizar Spotcast.
-
-BACKSPACE — TV / MONITOR
-
-Dispositivo objetivo:
-
-media_player.philips_google_tv_ta6_lt
-
-Actualmente figura como:
-
-unavailable
-
-Diseño:
-
-Backspace → función principal TV/monitor
-Backspace doble → activar modo volumen
-
-En modo volumen:
-
-+ → volumen +
-- → volumen -
-
-Esta integración todavía puede necesitar desarrollo.
-
-ENTER — PROYECTOR
-
-Una pulsación:
-
-Enter → encender proyector
-
-Doble pulsación:
-
-Enter Enter → OK
-
-La entidad específica del proyector todavía debe identificarse si no está documentada.
-
-* — RESERVADA
-
-Actualmente no tiene función.
-
-Reservada para futuras escenas o automatizaciones.
-
-No asignarla sin autorización explícita.
-
-NUMLOCK
-
-Debe ignorarse:
-
-KEY_NUMLOCK
-DOBLE PULSACIÓN
-
-Configuración actual:
-
-DOUBLE_PRESS_TIME = 0.4
-
-Dos pulsaciones de la misma tecla dentro de aproximadamente 400 ms se consideran doble pulsación.
-
-No eliminar este sistema.
-
-CONTROL CONTEXTUAL
-
-El diseño depende de un concepto importante:
-
-TECLA
-+
-ESTADO SELECCIONADO
-+
-MODO ACTIVO
-+
-TIPO DE PULSACIÓN
-
-Ejemplo:
-
-/ → JBL seleccionado
-+ → volumen JBL
-
-Pero:
-
-5 → Espejo seleccionado
-+ → brillo Espejo
-
-Y:
-
-Backspace doble
-→ modo volumen TV
-+ → volumen TV
-
-Por lo tanto + y - NO deben convertirse en funciones globales rígidas.
-
-ENTIDADES IMPORTANTES
-
-Luces:
-
-light.living_room_aurum
-light.kitchen_cuprum
-light.living_room_espejo
-light.alacena
-
-JBL:
-
-media_player.estudio
-
-Controles JBL:
-
-button.estudio_bluetooth
-button.estudio_mute
-button.estudio_play_pause
-number.estudio_volume
-
-Spotify / Spotcast:
-
-media_player.25040rp0ag_striker_boom_convidado2_spotcast
-media_player.37030f42f92b34e00f9f503a367226cbf242f8bd_striker_boom_convidado2_spotcast
-media_player.desktop_tf04l4g_striker_boom_convidado2_spotcast
-media_player.sala_de_estar_striker_boom_convidado2_spotcast
-
-TV:
-
-media_player.philips_google_tv_ta6_lt
-
-IR:
-
-infrared.control_universal_ir_emitter
-remote.control_universal
-remote.sala_de_estar
-PROBLEMA CONOCIDO — BRILLO
-
-Durante las primeras pruebas, mantener + o - presionado generó muchos eventos consecutivos.
-
-Esto provocó demasiadas solicitudes REST simultáneas/secuenciales a Home Assistant.
-
-Resultado observado:
-
-requests.exceptions.ReadTimeout
-
-Ejemplo:
-
-HTTPConnectionPool(host='localhost', port=8123)
-Read timed out. (read timeout=5)
-
-Cualquier solución futura debe considerar:
-
-rate limiting
-debounce
-acumulación de cambios
-evitar solicitudes innecesarias
-no bloquear el loop principal
-manejo de excepciones de red
-
-Pero NO sacrificar la respuesta normal de las teclas.
-
-FILOSOFÍA DEL PROYECTO
-
-Este es un controlador físico pensado para uso diario.
-
-La memoria muscular importa.
-
-No cambiar arbitrariamente el layout.
-
-No mover funciones existentes sin autorización.
-
-No eliminar funciones para simplificar el código.
-
-Preferir:
-
-pequeñas modificaciones
-+
-pruebas
-+
-commit
-
-en lugar de reescrituras completas.
-
-PROCEDIMIENTO PARA MODIFICAR
-
-Antes:
-
-leer documentación
-↓
-entender estado actual
-↓
-identificar función afectada
-
-Modificar:
-
-hacer el cambio mínimo necesario
-
-Probar:
-
-tecla normal
-tecla mantenida
-doble pulsación
-cambio de contexto
-errores de Home Assistant
-
-Después:
-
-git status
-git diff
-git add .
-git commit
-git push
-
-Cada versión funcional debe quedar respaldada en Git.
-
-REGLA DE ORO
-
-Si una función actualmente funciona:
-
-NO ROMPERLA
-
-Si una nueva función requiere modificarla:
-
-explicar primero qué cambia
-
-Si aparece un error:
-
-diagnosticar el error
-↓
-corregir específicamente el problema
-↓
-volver a probar
-
-No hacer una reescritura completa solamente porque apareció un bug puntual.
-
-OBJETIVO FINAL
-
-Convertir el numpad en un controlador físico completo para:
-
-Home Assistant
-Luces
-JBL
-Spotify
-TV/Monitor
-Proyector
-Escenas
-Automatizaciones
-
-manteniendo una interfaz física consistente, rápida y fácil de memorizar.
-
+Do not implement postponed functionality without explicit instruction.
